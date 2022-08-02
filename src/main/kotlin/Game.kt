@@ -10,9 +10,9 @@ import pers.shennoter.Type.*
 import java.util.Stack
 
 class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob(){
-    private var nextToPlay: Player? = null
-    private val playerList = mutableListOf<Player>()
-    private val cardStack = Stack<Card>()
+    private var nextToPlay: Player? = null // 下一个出牌的玩家
+    private val playerList = mutableListOf<Player>() // 已加入游戏的玩家
+    private val cardStack = Stack<Card>() // 已打乱的牌堆
 
     fun addPlayer(name:String){
         playerList.add(Player(name))
@@ -48,7 +48,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob(){
     }
 
     inner class Player(private val name: String){
-        private val hand: MutableList<Card> = mutableListOf()
+        private val hand: MutableList<Card> = mutableListOf() // 手牌
 
         fun view(){ // 查看手牌
             print("手牌：\n")
@@ -93,10 +93,10 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob(){
         }
     }
 
-    private inner class Deck{
+    private inner class Deck{ // 牌堆
         private var cardList = listOf<Card>()
         fun initialize(){
-            cardList = listOf(
+            cardList = listOf( // 按顺序的106张牌
                 Card(0, NORMAL, Colour.RED),
                 Card(0, NORMAL, Colour.BLUE),
                 Card(0, NORMAL, Colour.YELLOW),

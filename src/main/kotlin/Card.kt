@@ -6,16 +6,12 @@ class Card(
            val type: Type,
            val colour: Colour
 ){
-    val name = if(type == Type.NORMAL){
-        "[${colour.name} $point]"
+    val name = when(type){
+        Type.NORMAL -> "[${colour.name} $point]"
+        Type.WILD -> "[${type.name}]"
+        Type.WILDDRAWFOUR -> "[${type.name}]"
+        else -> "[${colour.name} ${type.name}]"
     }
-    else if(type == Type.WILD || type == Type.WILDDRAWFOUR){
-        "[${type.name}]"
-    }
-    else{
-        "[${colour.name} ${type.name}]"
-    }
-
 }
 
 enum class Type(name: String){
