@@ -9,6 +9,9 @@ class Card(
     val name = if(type == Type.NORMAL){
         "[${colour.name} $point]"
     }
+    else if(type == Type.WILD || type == Type.WILDDRAWFOUR){
+        "[${type.name}]"
+    }
     else{
         "[${colour.name} ${type.name}]"
     }
