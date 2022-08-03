@@ -16,6 +16,7 @@ object UNOmirai : KotlinPlugin(
         version = "0.1.0",
     ) {
         author("Shennoter")
+        author("Lynchrocket")
     }
 ) {
     override fun onEnable() {
@@ -27,9 +28,9 @@ object UNOmirai : KotlinPlugin(
 @OptIn(DelicateCoroutinesApi::class)
 fun startListen() {
     GlobalEventChannel.parentScope(GlobalScope).subscribeAlways<GroupMessageEvent> { event ->
-        if(event.message.content == "开始UNO"){
+        if (event.message.content == "开始UNO") {
             val game = Game()
             game.start()
         }
+    }
 }
-
