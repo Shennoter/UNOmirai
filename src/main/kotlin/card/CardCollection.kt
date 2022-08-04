@@ -5,26 +5,26 @@ package pers.shennoter.card
  * 牌堆、废牌堆、手牌
  * */
 
+//所有牌的集合，用Map存，后续手牌和牌堆都只用一个Set来存牌的编号就好（即Map的键）
 class CardCollection : HashMap<Int, Card> {
-    constructor(vararg cards: Card) : super(cards.toList().associateBy({ it.No }, { it }))
-    constructor(cards: List<Card>) : super(cards.associateBy({ it.No }, { it }))
+    constructor(vararg cards: Card, NumOfCards: Int = 108) : super(
+        (0 until NumOfCards).toList().zip(cards.toList()).toMap()
+    )
 
+    constructor(cards: List<Card>, NumOfCards: Int = 108) : super((0 until NumOfCards).toList().zip(cards).toMap())
 
 }
+
+fun List<Card>.toCardCollection(NumOfCards: Int = 108): CardCollection = CardCollection(*this.toTypedArray())
 
 class HandCards : ArrayList<Int> {
     constructor(vararg cardsNum: Int) : super(cardsNum.toList())
     constructor(cards: List<Int>) : super(cards)
 
-    fun cardExhibit() {
-        // 设置单张牌如何显示，对各种牌各有不同的显示。如：
-        // 普通牌：[红 5]
-        // 换色牌：[换色]（王牌：[王牌]） // 这两个都是黑色牌
-        // 其他牌：[蓝 +2]
-        val name = when (type) {
-            Type.NORMAL -> "[${colour.name} $point]"
-            Type.WILD, Type.WILDDRAWFOUR -> "[${type.name}]"
-            else -> "[${colour.name} ${type.name}]"
+    // 出牌
+    fun play() {
+        this.forEach {
+
         }
     }
 }

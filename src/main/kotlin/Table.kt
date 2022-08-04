@@ -6,11 +6,12 @@ import pers.shennoter.card.HandCards
 /**
  * ### 牌桌
  * 记录玩家的数据（如手牌），循环出牌
+ * 玩家的行为也在这定义
  */
 class Table : Iterable<Member> {
     val players = mutableListOf<Member>() // 玩家的列表
     var playerIndex = 0 // 玩家的编号
-    lateinit var handCard: MutableMap<Member, HandCards>
+    var handCard = mutableMapOf<Member, HandCards>() // 玩家和手牌
 
     // 判断人数是否在合理范围内
     fun isValidNumberOfPlayer(): Int {

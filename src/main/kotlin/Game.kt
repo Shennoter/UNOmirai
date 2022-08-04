@@ -6,20 +6,31 @@ import kotlinx.coroutines.coroutineScope
 import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.event.globalEventChannel
-import pers.shennoter.Type.*
-import java.util.Stack
+import pers.shennoter.card.*
 
 class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
-    private var nextToPlay: Player? = null // 下一个出牌的玩家
-    private val playerList = mutableListOf<Player>() // 已加入游戏的玩家
-    private val cardStack = Stack<Card>() // 已打乱的牌堆
+    private val table = Table() // 牌桌，内含玩家
 
-    fun addPlayer(name: String) {
-        playerList.add(Player(name))
-    }
+    private lateinit var cardCollection: CardCollection // 牌库，所有的牌，后面可自定义用牌的数量
 
-    fun rmvPlayer(name: String) {
-        playerList.remove(Player(name))
+    // 只标记牌的编号
+    private lateinit var cardDeck: MutableList<Int> // 牌堆
+    private var cardPile = mutableListOf<Int>() // 弃牌堆，重新洗牌时用
+    private var handCardPile = mutableListOf<Int>() // 手牌堆，目前玩家手上的牌
+
+    private lateinit var topCard: Pair<Colour, Int> // 已打出的牌的顶部牌，记录颜色和点数
+
+    // 展示手牌
+    fun cardExhibit() {
+        // 设置单张牌如何显示，对各种牌各有不同的显示。如：
+        // 普通牌：[红 5]
+        // 换色牌：[换色]（王牌：[王牌]） // 这两个都是黑色牌
+        // 其他牌：[蓝 +2]
+        val name = when (type) {
+            Type.NORMAL -> "[${colour.name} $point]"
+            Type.WILD, Type.WILDDRAWFOUR -> "[${type.name}]"
+            else -> "[${colour.name} ${type.name}]"
+        }
     }
 
     suspend fun start() {
@@ -32,7 +43,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                 }
         }
         if (playerList.size > 1) {
-            Deck().initialize()
+//            Deck().initialize()
             distribute()
             nextToPlay = playerList[0]
         } else {
@@ -40,10 +51,41 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
         }
     }
 
-    private fun distribute() { // 发牌
-        playerList.forEach {
-            it.draw(7, true)
+    // 初始发牌阶段
+    private suspend fun distribute(NumOfCards: Int = 108) {
+        // 初始化牌库
+        if (NumOfCards == 108) {
+            cardCollection = (Card.pointOfZero()
+                    + Card.pointOfNormal() + Card.pointOfNormal()
+                    + Card.functionCards() + Card.functionCards()
+                    + Card.blackCards() + Card.blackCards() + Card.blackCards() + Card.blackCards()
+                    ).toCardCollection(NumOfCards)
+
+        } else {
+            cardCollection = (Card.pointOfZero()
+                    + Card.pointOfNormal() + Card.pointOfNormal()
+                    + Card.functionCards() + Card.functionCards()
+                    + Card.blackCards() + Card.blackCards() + Card.blackCards() + Card.blackCards()
+                    + Card.pointOfZero()
+                    + Card.pointOfNormal() + Card.pointOfNormal()
+                    + Card.functionCards() + Card.functionCards()
+                    + Card.blackCards() + Card.blackCards() + Card.blackCards() + Card.blackCards()
+                    ).toCardCollection(NumOfCards * 2)
         }
+        // 初始化牌堆
+        cardDeck = (0 until NumOfCards).toMutableList()
+        // 初始化手牌
+        for (player in table.players) {
+            val listPi = mutableListOf<Int>()
+            var tmp = (0 until NumOfCards).random()
+            for (i in 1..7) {
+                while (tmp in listPi) tmp = (0 until NumOfCards).random()
+                listPi.add(tmp)
+                cardDeck.remove(tmp)
+            }
+            table.handCard.put(player, HandCards(listPi))
+        }
+        
     }
 
     inner class Player(private val name: String) {
@@ -94,17 +136,6 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
             }
             hand.removeAt(index - 1)
             println("$name 手牌数量：${hand.size}")
-        }
-    }
-
-    private inner class Deck { // 牌堆
-        private var cardList = listOf<Card>()
-        fun initialize() {
-
-            cardList = cardList.shuffled() // 打乱顺序
-            cardList.forEach {// 加入牌堆
-                cardStack.push(it)
-            }
         }
     }
 }
