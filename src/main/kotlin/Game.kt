@@ -64,6 +64,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
         for (player in table.players) {
             val listPi = mutableListOf<Int>()
             var tmp = (0 until NumOfCards).random()
+            // 初始每个人发7张牌
             for (i in 1..7) {
                 while (tmp in listPi) tmp = (0 until NumOfCards).random()
                 listPi.add(tmp)
@@ -71,13 +72,21 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
             }
             table.handCard.put(player, HandCards(listPi))
         }
-        // 将手牌信息发送给玩家
+        // TODO 将手牌信息发送给玩家
         for (player in table.players) {
             player.sendMessage(cardCollection.cardExhibit(table.handCard[player]))
         }
 
     }
 
+    // 出牌阶段
+    private suspend fun play() {
+        for (player in table.iterator()){
+
+        }
+    }
+
+    // TODO 基本的player逻辑已经迁移到Table.kt了，其余逻辑也分散到其他地方，后续这部分要删掉
     inner class Player(private val name: String) {
         private val hand: MutableList<Card> = mutableListOf() // 手牌
 
