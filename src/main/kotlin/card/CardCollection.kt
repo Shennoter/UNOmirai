@@ -25,9 +25,9 @@ class CardCollection : HashMap<Int, Card> {
         for (idx in cardIndexSorted) {
             val card = this[idx]
             val name = when (card?.type) {
-                Type.NORMAL -> "[$idx][${card.colour.name} ${card.point}]"
-                Type.WILD, Type.WILDDRAWFOUR -> "[$idx][${card.type.name}]"
-                else -> "[$idx][${card?.colour?.name} ${card?.type?.name}]"
+                Type.NORMAL -> "[$idx][${card.colour.name} ${card.point}]\n"
+                Type.WILD, Type.WILDDRAWFOUR -> "[$idx][${card.type.name}]\n"
+                else -> "[$idx][${card?.colour?.name} ${card?.type?.name}]\n"
             }
             exhibition += name
         }
