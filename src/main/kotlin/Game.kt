@@ -20,19 +20,6 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
 
     private lateinit var topCard: Pair<Colour, Int> // 已打出的牌的顶部牌，记录颜色和点数
 
-    // 展示手牌
-    fun cardExhibit() {
-        // 设置单张牌如何显示，对各种牌各有不同的显示。如：
-        // 普通牌：[红 5]
-        // 换色牌：[换色]（王牌：[王牌]） // 这两个都是黑色牌
-        // 其他牌：[蓝 +2]
-        val name = when (type) {
-            Type.NORMAL -> "[${colour.name} $point]"
-            Type.WILD, Type.WILDDRAWFOUR -> "[${type.name}]"
-            else -> "[${colour.name} ${type.name}]"
-        }
-    }
-
     suspend fun start() {
         coroutineScope {
             val channel = globalEventChannel()
@@ -60,7 +47,6 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                     + Card.functionCards() + Card.functionCards()
                     + Card.blackCards() + Card.blackCards() + Card.blackCards() + Card.blackCards()
                     ).toCardCollection(NumOfCards)
-
         } else {
             cardCollection = (Card.pointOfZero()
                     + Card.pointOfNormal() + Card.pointOfNormal()
@@ -85,7 +71,11 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
             }
             table.handCard.put(player, HandCards(listPi))
         }
-        
+        // 将手牌信息发送给玩家
+        for (player in table.players) {
+            player.sendMessage(cardCollection.cardExhibit(table.handCard[player]))
+        }
+
     }
 
     inner class Player(private val name: String) {
