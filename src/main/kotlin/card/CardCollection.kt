@@ -4,6 +4,7 @@ package pers.shennoter.card
 /**
  * ### 牌的集合
  * 牌堆、废牌堆、手牌
+ * 注意牌的编号从1开始
  * */
 
 //所有牌的集合，用Map存，后续手牌和牌堆都只用一个Set来存牌的编号就好（即Map的键）
@@ -11,13 +12,13 @@ class CardCollection : HashMap<Int, Card> {
     var NumOfCards = 108
 
     constructor(vararg cards: Card, NumOfCards: Int = 108) : super(
-        (0 until NumOfCards).toList().zip(cards.toList()).toMap()
+        (1..NumOfCards).toList().zip(cards.toList()).toMap()
     ) {
         this.NumOfCards = NumOfCards
     }
 
     constructor(cards: List<Card>, NumOfCards: Int = 108) : super(
-        (0 until NumOfCards).toList().zip(cards).toMap()
+        (1..NumOfCards).toList().zip(cards).toMap()
     ) {
         this.NumOfCards = NumOfCards
     }

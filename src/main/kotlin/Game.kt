@@ -101,14 +101,15 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                     ).toCardCollection(NumOfCards * 2)
         }
         // 初始化牌堆
-        cardDeck = (0 until NumOfCards).toMutableList()
+        cardDeck = (1..NumOfCards).toMutableList()
         // 初始化手牌
-        var tmpIndex = (0 until NumOfCards).random()
+        // 不能调用抽牌的函数，因为需要初始化table的handCard
+        var tmpIndex = (1..NumOfCards).random()
         for (player in table.players) {
             val listPi = mutableListOf<Int>()
             // 初始每个人发7张牌
             for (i in 1..7) {
-                while (tmpIndex !in cardDeck) tmpIndex = (0 until NumOfCards).random()
+                while (tmpIndex !in cardDeck) tmpIndex = (1..NumOfCards).random()
                 listPi.add(tmpIndex)
                 handCardPile.add(tmpIndex)
                 cardDeck.remove(tmpIndex)
@@ -117,11 +118,12 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
         }
         // 初始化底牌
         while (true) { // 防止tmpIndex出意外生成无效编号（似乎并不会）
-            tmpIndex = (0 until NumOfCards).random()
-            while (tmpIndex !in cardDeck) tmpIndex = (0 until NumOfCards).random()
+            // 限制随机范围，使得黑卡不能作为底牌
+            val rangeOfNotBlack = NumOfCards - (NumOfCards % 100)
+            tmpIndex = (1..rangeOfNotBlack).random()
+            while (tmpIndex !in cardDeck) tmpIndex = (1..rangeOfNotBlack).random()
             val tmpTopCard = cardCollection[tmpIndex]
             if (tmpTopCard != null) {
-                if (tmpTopCard.colour == Colour.NONE) continue
                 table.topCard = Triple(tmpIndex, tmpTopCard.colour, tmpTopCard.point)
             } else {
                 continue
@@ -160,14 +162,8 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
 
             /**
              * 玩家每次发送以“/“开头的消息，都视为一次出牌请求。出牌请求有多种处理结果，包括
-             * 1.玩家并没有要出的牌
-             * 2.玩家出牌不符合规则(与上家出的牌不是同类型的，或者比上家出的小)
-             * 3.玩家把所有的牌都出完了，赢得游戏
-             * 4.玩家顺利出牌，并进入下家的回合
-             * 5.玩家跳过
-             * 以上结果都会迎来onEvent的结束，但只有情况4和情况5会顺利进入下一家的回合
-             * 其中，情况3会直接进入settle环节
              */
+            // TODO 逻辑不太准确，需要改一下
             val job = if (this.isActive) {
                 gameEventChannel.subscribeAlways<MessageEvent> playCard@{
                     // 检查玩家是否能跟牌
@@ -176,6 +172,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                         player.sendMessage("您无法跟牌哦")
                         table.handCard[player]!!.drawCard(1)
                         startJob.cancel()
+                        return@playCard
                     }
                     // 能跟牌就选择打哪张牌
                     if (message.contentToString().startsWith('/')) {
@@ -227,18 +224,24 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
     // 一些工具函数
     // 抽牌，包括无法出牌时的抽牌和因功能牌的抽牌
     private fun CardCollection.HandCards.drawCard(numOfDraws: Int) {
-        var tmpIndex = (0 until NumOfCards).random()
-        for (ithDraw in (0 until numOfDraws)) {
+        var tmpIndex = (1..NumOfCards).random()
+        for (ithDraw in (1..numOfDraws)) {
             // 牌堆空了需要洗牌
             if (cardDeck.isEmpty()) {
                 cardDeck = cardPile
                 cardPile = mutableListOf<Int>()
             }
-            while (tmpIndex !in cardDeck) tmpIndex = (0 until NumOfCards).random()
+            while (tmpIndex !in cardDeck) tmpIndex = (1..NumOfCards).random()
             this.add(tmpIndex)
             handCardPile.add(tmpIndex)
             cardDeck.remove(tmpIndex)
         }
     }
 
+    // 将牌打出
+    private fun CardCollection.HandCards.playCard(cardIndex: Int) {
+        this.remove(cardIndex)
+        handCardPile.remove(cardIndex)
+        cardPile.add(cardIndex)
+    }
 }
