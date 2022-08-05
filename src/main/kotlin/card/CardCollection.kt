@@ -56,13 +56,14 @@ class CardCollection : HashMap<Int, Card> {
             return if (this.remove(numOfCard)) {
                 true
             } else {
-                print("没在你的手牌中找到你想出的牌")
+                print("没在您的手牌中找到您想出的牌")
                 false
             }
         }
 
         // 检测玩家是否有与底牌同色or同点数的牌
         fun matchColourOrPoint(topCard: Triple<Int, Colour, Int>): Boolean {
+            // 遍历实现，是否有更好的方法？
             for (cardIndex in this@HandCards) {
                 val card = this@CardCollection[cardIndex]
                 if (card != null) {

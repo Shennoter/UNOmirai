@@ -29,6 +29,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                     event.group == gameGroup
                 }
         }
+        // TODO 游戏刚开始的操作，待完善
         prepare()
     }
 
@@ -46,7 +47,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                 if (table.enter(sender)) {
                     "加入成功\n当前玩家：${table.players.map { it.nick }}"
                 } else {
-                    "游戏人数已满或你已经在游戏中了，无法加入！"
+                    "游戏人数已满或您已经在游戏中了，无法加入！"
                 }
             }
             case("下桌") {
@@ -129,13 +130,14 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
 
         // TODO 将手牌信息发送给玩家
         for (player in table.players) {
-            player.sendMessage(table.handCard[player]?.cardExhibit() ?: "无法找到你，请重试")
+            player.sendMessage(table.handCard[player]?.cardExhibit() ?: "无法找到您，请重试")
         }
         play()
     }
 
     // 出牌阶段
     private suspend fun play() {
+        var isRunning = true
         for (player in table.iterator()) {
 
         }
