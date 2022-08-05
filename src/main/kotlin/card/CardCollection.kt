@@ -1,6 +1,5 @@
 package pers.shennoter.card
 
-import kotlin.properties.Delegates
 
 /**
  * ### 牌的集合
@@ -51,9 +50,9 @@ class CardCollection : HashMap<Int, Card> {
             return exhibition
         }
 
-        // 判断玩家是否有该牌并出牌
-        fun haveCardAndPlay(numOfCard: Int): Boolean {
-            return if (this.remove(numOfCard)) {
+        // 判断玩家是否有该牌
+        fun haveCard(cardIndex: Int): Boolean {
+            return if (this.contains(cardIndex)) {
                 true
             } else {
                 print("没在您的手牌中找到您想出的牌")
@@ -62,7 +61,7 @@ class CardCollection : HashMap<Int, Card> {
         }
 
         // 检测玩家是否有与底牌同色or同点数的牌
-        fun matchColourOrPoint(topCard: Triple<Int, Colour, Int>): Boolean {
+        fun haveValidCard(topCard: Triple<Int, Colour, Int>): Boolean {
             // 遍历实现，是否有更好的方法？
             for (cardIndex in this@HandCards) {
                 val card = this@CardCollection[cardIndex]
