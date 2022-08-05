@@ -1,7 +1,8 @@
 package pers.shennoter
 
 import net.mamoe.mirai.contact.Member
-import pers.shennoter.card.HandCards
+import pers.shennoter.card.CardCollection
+import pers.shennoter.card.Colour
 
 /**
  * ### 牌桌
@@ -11,7 +12,10 @@ import pers.shennoter.card.HandCards
 class Table : Iterable<Member> {
     val players = mutableListOf<Member>() // 玩家的列表
     var playerIndex = 0 // 玩家的编号
-    var handCard = mutableMapOf<Member, HandCards>() // 玩家和手牌
+    var handCard = mutableMapOf<Member, CardCollection.HandCards>() // 玩家和手牌
+
+    lateinit var topCard: Triple<Int, Colour, Int> // 已打出的牌的顶部牌，记录编号、颜色、点数
+
 
     // 判断人数是否在合理范围内
     fun isValidNumberOfPlayer(): Int {
@@ -28,12 +32,11 @@ class Table : Iterable<Member> {
 
     // 进入房间
     fun enter(player: Member): Boolean {
-        val numberOfPlayer: Int = isValidNumberOfPlayer()
-        return if (numberOfPlayer in -1..0 && player !in players) {
+        val validCheck = isValidNumberOfPlayer()
+        return if (validCheck in -1..0 && player !in players) {
             players.add(player)
             true
         } else {
-            print("人数已满，不能加人")
             false
         }
     }
