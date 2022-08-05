@@ -31,28 +31,22 @@ class CardCollection : HashMap<Int, Card> {
         // 用于展示手牌
         fun cardExhibit(): String {
             // 设置单张牌如何显示，对各种牌各有不同的显示。如：
-            // 普通牌：[红 5]
-            // 换色牌：[换色]（王牌：[王牌]） // 这两个都是黑色牌
-            // 其他功能牌：[蓝 +2]
+            // 普通牌：[0][红 5]
+            // 换色牌：[1][换色]（王牌：[2][王牌]） // 这两个都是黑色牌
+            // 其他功能牌：[3][蓝 +2]
             // 会按照牌的编号顺序输出
             val cardIndexSorted = this@HandCards.sorted()
             var exhibition = ""
-            var lastname = ""
 
             for (idx in cardIndexSorted) {
                 val card = this@CardCollection[idx]
                 val name = when (card?.type) {
-                    Type.NORMAL -> "[${card.colour.name} ${card.point}]"
-                    Type.WILD, Type.WILDDRAWFOUR -> "[${card.type.name}]"
-                    Type.DRAWTWO, Type.REVERSE, Type.SKIP -> "[${card.colour.name} ${card.type.name}]"
-                    else -> "[Not A Card]"
+                    Type.NORMAL -> "[$idx][${card.colour.name} ${card.point}]\n"
+                    Type.WILD, Type.WILDDRAWFOUR -> "[$idx][${card.type.name}]\n"
+                    Type.DRAWTWO, Type.REVERSE, Type.SKIP -> "[$idx][${card.colour.name} ${card.type.name}]\n"
+                    else -> "[$idx][Not A Card]\n"
                 }
-                if (lastname == name) {
-                    exhibition.
-                } else {
-                    exhibition += "\n"
-                    exhibition += name
-                }
+                exhibition += name
             }
             return exhibition
         }
