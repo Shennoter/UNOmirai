@@ -6,16 +6,75 @@ import pers.shennoter.card.Colour
 
 /**
  * ### 牌桌
- * 记录玩家的数据（如手牌），循环出牌
- * 玩家的行为也在这定义
+ * 记录玩家的数据（如手牌）、行为，循环出牌
  */
-class Table : Iterable<Member> {
+class Table(
+    val numOfCards: Int = 108 // 牌的数量，默认是108张，即一副牌
+) : Iterable<Member> {
     val players = mutableListOf<Member>() // 玩家的列表
     var playerIndex = 0 // 玩家的编号
     var handCard = mutableMapOf<Member, CardCollection.HandCards>() // 玩家和手牌
 
     lateinit var topCard: Triple<Int, Colour, Int> // 已打出的牌的顶部牌，记录编号、颜色、点数
 
+    private val numOfBlack = (numOfCards % 100) // 黑牌的数量
+
+    val startOfNum = (numOfBlack shr 1) + 1 // 普通牌开始的编号（除面值为0的牌）
+    val startOfFunc = startOfNum + (numOfBlack shl 3) + numOfBlack // 功能牌开始的编号
+    val startOfBlack = numOfCards - numOfBlack + 1 // 黑牌的开始编号
+
+    // 通过牌的编号直接获取牌的颜色和点数
+    fun getColourAndPoint(cardIndex: Int): Triple<Int, Colour, Int> {
+        val cardColour: Colour
+        var cardPoint: Int
+        when (cardIndex) {
+            in 1 until startOfNum -> {
+                cardPoint = 0
+                cardColour = when (cardIndex % 4) {
+                    1 -> Colour.RED
+                    2 -> Colour.YELLOW
+                    3 -> Colour.BLUE
+                    0 -> Colour.GREEN
+                    else -> Colour.NOT_A_CARD
+                }
+            }
+
+            in startOfNum until startOfFunc -> {
+                cardPoint = (cardIndex - startOfNum + 1) % 9
+                if (cardPoint == 0) cardPoint = 9
+                cardColour = when ((cardIndex - startOfNum + 1) % 4) {
+                    1 -> Colour.RED
+                    2 -> Colour.YELLOW
+                    3 -> Colour.BLUE
+                    0 -> Colour.GREEN
+                    else -> Colour.NOT_A_CARD
+                }
+            }
+
+            in startOfFunc until startOfBlack -> {
+                cardPoint = -((cardIndex - startOfFunc + 1) % 3)
+                if (cardPoint == 0) cardPoint = -3
+                cardColour = when ((cardIndex - startOfFunc + 1) % 4) {
+                    1 -> Colour.RED
+                    2 -> Colour.YELLOW
+                    3 -> Colour.BLUE
+                    0 -> Colour.GREEN
+                    else -> Colour.NOT_A_CARD
+                }
+            }
+
+            in startOfBlack..numOfCards -> {
+                cardPoint = ((cardIndex - startOfBlack + 1) % 2) - 5
+                cardColour = Colour.NONE
+            }
+
+            else -> {
+                cardPoint = 100
+                cardColour = Colour.NOT_A_CARD
+            }
+        }
+        return Triple(cardIndex, cardColour, cardPoint)
+    }
 
     // 判断人数是否在合理范围内
     fun isValidNumberOfPlayer(): Int {

@@ -7,13 +7,11 @@ import net.mamoe.mirai.event.events.MessageEvent
 import net.mamoe.mirai.event.globalEventChannel
 import net.mamoe.mirai.event.subscribeGroupMessages
 import net.mamoe.mirai.message.data.At
-import net.mamoe.mirai.message.data.content
 import pers.shennoter.card.*
 
 class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
-    private val table = Table() // 牌桌，内含玩家
+    private lateinit var table: Table // 牌桌，内含玩家
 
-    private var NumOfCards = 108 // 牌的数量，默认是108张，即一副牌
     private lateinit var cardCollection: CardCollection // 牌库，所有的牌，后面可自定义用牌的数量
 
     // 只标记牌的编号
@@ -31,6 +29,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                 }
         }
         // TODO 游戏刚开始的操作，待完善
+        table = Table() // 初始化牌桌，最主要是指定用多少副牌
         prepare()
     }
 
@@ -86,30 +85,29 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
     // 给每位玩家各分发7张手牌
     private suspend fun distribute() {
         // 初始化牌库
-        cardCollection = if (NumOfCards == 108) {
+        cardCollection = if (table.numOfCards == 108) {
             (Card.pointOfZero()
                     + Card.pointOfNormal() + Card.pointOfNormal()
                     + Card.functionCards() + Card.functionCards()
                     + Card.blackCards() + Card.blackCards() + Card.blackCards() + Card.blackCards()
-                    ).toCardCollection(NumOfCards)
+                    ).toCardCollection(table.numOfCards)
         } else {
             (Card.pointOfZero() + Card.pointOfZero()
                     + Card.pointOfNormal() + Card.pointOfNormal() + Card.pointOfNormal() + Card.pointOfNormal()
                     + Card.functionCards() + Card.functionCards() + Card.functionCards() + Card.functionCards()
                     + Card.blackCards() + Card.blackCards() + Card.blackCards() + Card.blackCards()
                     + Card.blackCards() + Card.blackCards() + Card.blackCards() + Card.blackCards()
-                    ).toCardCollection(NumOfCards * 2)
+                    ).toCardCollection(table.numOfCards)
         }
         // 初始化牌堆
-        cardDeck = (1..NumOfCards).toMutableList()
+        cardDeck = (1..table.numOfCards).toMutableList()
         // 初始化手牌
         // 不能调用抽牌的函数，因为需要初始化table的handCard
-        var tmpIndex = (1..NumOfCards).random()
         for (player in table.players) {
             val listPi = mutableListOf<Int>()
             // 初始每个人发7张牌
             for (i in 1..7) {
-                while (tmpIndex !in cardDeck) tmpIndex = (1..NumOfCards).random()
+                val tmpIndex = cardDeck.random()
                 listPi.add(tmpIndex)
                 handCardPile.add(tmpIndex)
                 cardDeck.remove(tmpIndex)
@@ -117,25 +115,17 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
             table.handCard.put(player, cardCollection.HandCards(listPi))
         }
         // 初始化底牌
-        while (true) { // 防止tmpIndex出意外生成无效编号（似乎并不会）
-            // 限制随机范围，使得黑卡不能作为底牌
-            val rangeOfNotBlack = NumOfCards - (NumOfCards % 100)
-            tmpIndex = (1..rangeOfNotBlack).random()
-            while (tmpIndex !in cardDeck) tmpIndex = (1..rangeOfNotBlack).random()
-            val tmpTopCard = cardCollection[tmpIndex]
-            if (tmpTopCard != null) {
-                table.topCard = Triple(tmpIndex, tmpTopCard.colour, tmpTopCard.point)
-            } else {
-                continue
-            }
-            cardPile.add(tmpIndex)
-            cardDeck.remove(tmpIndex)
-            break
-        }
+        // 限制随机范围，使得黑卡不能作为底牌
+        var tmpIndex = (1 until table.startOfBlack).random()
+        while (tmpIndex !in cardDeck) tmpIndex = (1 until table.startOfBlack).random()
+
+        table.topCard = table.getColourAndPoint(tmpIndex)
+        cardPile.add(tmpIndex)
+        cardDeck.remove(tmpIndex)
 
         // TODO 将手牌信息发送给玩家
         for (player in table.players) {
-            player.sendMessage(table.handCard[player]?.cardExhibit() ?: "无法找到您，请重试")
+            player.sendMessage(table.handCard[player]?.cardExhibit() ?: "无法找到你，我的朋友，请重试")
         }
         play()
     }
@@ -224,14 +214,15 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
     // 一些工具函数
     // 抽牌，包括无法出牌时的抽牌和因功能牌的抽牌
     private fun CardCollection.HandCards.drawCard(numOfDraws: Int) {
-        var tmpIndex = (1..NumOfCards).random()
+        // 抽指定的张数
         for (ithDraw in (1..numOfDraws)) {
             // 牌堆空了需要洗牌
             if (cardDeck.isEmpty()) {
                 cardDeck = cardPile
                 cardPile = mutableListOf<Int>()
             }
-            while (tmpIndex !in cardDeck) tmpIndex = (1..NumOfCards).random()
+            // 抽牌
+            val tmpIndex = cardDeck.random()
             this.add(tmpIndex)
             handCardPile.add(tmpIndex)
             cardDeck.remove(tmpIndex)
@@ -240,8 +231,13 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
 
     // 将牌打出
     private fun CardCollection.HandCards.playCard(cardIndex: Int) {
+        // 从手牌中打出
         this.remove(cardIndex)
+        // 从手牌堆中删除
         handCardPile.remove(cardIndex)
+        // 加入到弃牌堆中
         cardPile.add(cardIndex)
+        // 重置顶牌
+        table.topCard = table.getColourAndPoint(cardIndex)
     }
 }
