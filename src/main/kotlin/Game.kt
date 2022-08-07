@@ -2,6 +2,7 @@ package pers.shennoter
 
 import kotlinx.coroutines.*
 import net.mamoe.mirai.contact.Group
+import net.mamoe.mirai.contact.Member
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.event.events.MessageEvent
 import net.mamoe.mirai.event.globalEventChannel
@@ -75,7 +76,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                 }
             }
         }
-        //等待job结束，即成功开始游戏
+        // 等待job结束，即成功开始游戏
         job.join()
         if (started) distribute()
     }
@@ -138,6 +139,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
         while (isRunning) {
             val playerAndNext = table.getPlayerAndNext()
             val player = playerAndNext.first
+            val playerHandCards = table.getHandCards(player)
             val playerNext = playerAndNext.second
 
             if (this.isActive)
@@ -152,22 +154,23 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
             }
 
             /**
-             * 玩家每次发送以“/“开头的消息，都视为一次出牌请求。出牌请求有多种处理结果，包括
+             * 出牌请求的格式为 "\[numOfCard]" ，numOfCard是牌的编号
              */
             // TODO 逻辑不太准确，需要改一下
             val job = if (this.isActive) {
                 gameEventChannel.subscribeAlways<MessageEvent> playCard@{
                     // 检查玩家是否能跟牌
                     // 无法跟牌就抽一张牌
-                    if (!table.getHandCards(player).haveValidCard(table.topCard)) {
+                    if (!playerHandCards.haveValidCard(table.topCard)) {
                         player.sendMessage("兄弟你无法跟牌哟")
-                        table.getHandCards(player).drawCard(1)
+                        playerHandCards.drawCard(1)
                         table.setNextPlayer()
                         startJob.cancel()
                         return@playCard
                     }
                     // 能跟牌就选择打哪张牌
-                    if (message.contentToString().startsWith('/')) {
+                    // TODO 在这里下面的 return@playCard 实际上是要玩家重新操作
+                    if (message.contentToString().startsWith('\\')) {
                         val cardToPlay = message.contentToString().substring(1).trimStart('[').trimEnd(']')
                         val cardIndex: Int
                         // 检查出牌的指令是否合法
@@ -178,15 +181,15 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                             return@playCard
                         }
                         // 检查是否有想要出的牌
-                        if (!table.getHandCards(player).haveCard(cardIndex)) {
-                            player.sendMessage("在您的手牌中没有找到您想出的牌哦")
+                        if (!playerHandCards.haveCard(cardIndex)) {
+                            player.sendMessage("在您的手牌中没有找到您想出的牌哦，请重试。")
                             return@playCard
                         }
                         // 出牌
                         val card = cardCollection[cardIndex] //玩家想出的牌
                         // TODO 可能会因莫名其妙的原因乱出了牌？在这里似乎不会出现NOT_A_CARD的情况，后续要把逻辑补上
-                        if (card == Card.NOT_A_CARD || card == null) {
-                            player.sendMessage("似乎没有这张牌欸")
+                        if (card == null || card == Card.NOT_A_CARD) {
+                            player.sendMessage("似乎没有这张牌欸，请重试。")
                             return@playCard
                         }
                         /**
@@ -195,21 +198,51 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                          *  2.功能牌 -> 颜色or点数
                          *  3.黑牌
                          */
+                        // 检查保证玩家不会出invalid的牌
                         if (!(card.colour == table.topCard.second || card.point == table.topCard.third || card.colour == Colour.NONE)) {
                             player.sendMessage("你出的牌不合法喔，请重新选择你的牌吧")
                             return@playCard
                         }
 
+                        // TODO 在这下面的 return@playCard 如果未做标记，都是正常的
+
+                        // TODO 喊uno没做，后面需要补充
+                        playerHandCards.playCard(cardIndex)
+                        if (playerHandCards.size == 0) {
+                            settle(player)
+                            isRunning = false
+                        }
+                        when (card.type) {
+                            Type.SKIP -> table.isSkip = true
+                            Type.REVERSE -> table.isReverse = !table.isReverse
+                            Type.DRAWTWO -> table.getHandCards(playerNext).drawCard(2)
+                            Type.WILD -> {
+                                player.sendMessage("来指定你的颜色吧！")
+                                // TODO 指定颜色需要玩家再发多一条指令
+                            }
+
+                            Type.WILDDRAWFOUR -> {
+                                table.getHandCards(playerNext).drawCard(4)
+                                player.sendMessage("来指定你的颜色吧！")
+                                // TODO 指定颜色需要玩家再发多一条指令
+                            }
+
+                            // 对Type.NORMAL不做任何处理
+                            else -> {}
+                        }
+                        table.setNextPlayer()
                     }
                 }
             } else {
                 return
             }
-
             job.join()
         }
-
         this.cancel()
+    }
+
+    // 结束阶段
+    private suspend fun settle(winner: Member) {
 
     }
 

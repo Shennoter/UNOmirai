@@ -67,7 +67,7 @@ class CardCollection : HashMap<Int, Card> {
             for (cardIndex in this@HandCards) {
                 val card = this@CardCollection[cardIndex]
                 if (card != null) {
-                    if (topCard.second == card.colour || topCard.third == card.point) {
+                    if (topCard.second == card.colour || topCard.third == card.point || card.colour == Colour.NONE) {
                         return true
                     }
                 }
