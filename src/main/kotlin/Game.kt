@@ -29,7 +29,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                 }
         }
         // TODO 游戏刚开始的操作，待完善
-        table = Table() // 初始化牌桌，最主要是指定用多少副牌
+        table = Table(108) // 初始化牌桌，最主要是指定用多少副牌
         prepare()
     }
 
@@ -112,7 +112,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                 handCardPile.add(tmpIndex)
                 cardDeck.remove(tmpIndex)
             }
-            table.handCard.put(player, cardCollection.HandCards(listPi))
+            table.addHandCards(player, cardCollection.HandCards(listPi))
         }
         // 初始化底牌
         // 限制随机范围，使得黑卡不能作为底牌
@@ -125,7 +125,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
 
         // TODO 将手牌信息发送给玩家
         for (player in table.players) {
-            player.sendMessage(table.handCard[player]?.cardExhibit() ?: "无法找到你，我的朋友，请重试")
+            player.sendMessage(table.getHandCards(player).cardExhibit()/*?: "无法找到你，我的朋友，请重试"*/)
         }
         play()
     }
@@ -134,13 +134,14 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
     private suspend fun play() {
         var isRunning = true
 
-        var lastCardSet = CardSet()
-        var lastCombination: Combination = NotACombination
-
         // 玩家轮流出牌
-        for (player in table.iterator()) {
+        while (isRunning) {
+            val playerAndNext = table.getPlayerAndNext()
+            val player = playerAndNext.first
+            val playerNext = playerAndNext.second
+
             if (this.isActive)
-                gameGroup.sendMessage(At(player) + "轮到你出牌了")
+                gameGroup.sendMessage(At(player) + "轮到你出牌了！君のタイム！")
             val startJob = Job(this)
 
             val gameEventChannel = coroutineScope {
@@ -158,9 +159,10 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                 gameEventChannel.subscribeAlways<MessageEvent> playCard@{
                     // 检查玩家是否能跟牌
                     // 无法跟牌就抽一张牌
-                    if (!table.handCard[player]!!.haveValidCard(table.topCard)) {
-                        player.sendMessage("您无法跟牌哦")
-                        table.handCard[player]!!.drawCard(1)
+                    if (!table.getHandCards(player).haveValidCard(table.topCard)) {
+                        player.sendMessage("兄弟你无法跟牌哟")
+                        table.getHandCards(player).drawCard(1)
+                        table.setNextPlayer()
                         startJob.cancel()
                         return@playCard
                     }
@@ -176,7 +178,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                             return@playCard
                         }
                         // 检查是否有想要出的牌
-                        if (!table.handCard[player]!!.haveCard(cardIndex)) {
+                        if (!table.getHandCards(player).haveCard(cardIndex)) {
                             player.sendMessage("在您的手牌中没有找到您想出的牌哦")
                             return@playCard
                         }
@@ -184,7 +186,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                         val card = cardCollection[cardIndex] //玩家想出的牌
                         // TODO 可能会因莫名其妙的原因乱出了牌？在这里似乎不会出现NOT_A_CARD的情况，后续要把逻辑补上
                         if (card == Card.NOT_A_CARD || card == null) {
-                            player.sendMessage("似乎没有这张牌啦")
+                            player.sendMessage("似乎没有这张牌欸")
                             return@playCard
                         }
                         /**
@@ -203,12 +205,12 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
             } else {
                 return
             }
+
             job.join()
-            if (!isRunning) {
-                this.cancel()
-                break
-            }
         }
+
+        this.cancel()
+
     }
 
     // 一些工具函数
@@ -230,6 +232,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
     }
 
     // 将牌打出
+    // 在此前要做检查保证cardIndex有效
     private fun CardCollection.HandCards.playCard(cardIndex: Int) {
         // 从手牌中打出
         this.remove(cardIndex)

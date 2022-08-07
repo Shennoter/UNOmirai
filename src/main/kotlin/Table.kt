@@ -10,18 +10,20 @@ import pers.shennoter.card.Colour
  */
 class Table(
     val numOfCards: Int = 108 // 牌的数量，默认是108张，即一副牌
-) : Iterable<Member> {
+) {
+    private val numOfBlack = (numOfCards % 100) // 黑牌的数量
+    val startOfNum = (numOfBlack shr 1) + 1 // 普通牌开始的编号（除面值为0的牌）
+    val startOfFunc = startOfNum + (numOfBlack shl 3) + numOfBlack // 功能牌开始的编号 startOfNum + (numOfBlack * 9)
+    val startOfBlack = numOfCards - numOfBlack + 1 // 黑牌的开始编号
+
     val players = mutableListOf<Member>() // 玩家的列表
-    var playerIndex = 0 // 玩家的编号
-    var handCard = mutableMapOf<Member, CardCollection.HandCards>() // 玩家和手牌
+    private var playerIndex = 0 // 玩家的编号，需要严格保证范围在0 until players.size
+    private var handCard = mutableMapOf<Member, CardCollection.HandCards>() // 玩家和手牌
 
     lateinit var topCard: Triple<Int, Colour, Int> // 已打出的牌的顶部牌，记录编号、颜色、点数
 
-    private val numOfBlack = (numOfCards % 100) // 黑牌的数量
-
-    val startOfNum = (numOfBlack shr 1) + 1 // 普通牌开始的编号（除面值为0的牌）
-    val startOfFunc = startOfNum + (numOfBlack shl 3) + numOfBlack // 功能牌开始的编号
-    val startOfBlack = numOfCards - numOfBlack + 1 // 黑牌的开始编号
+    var isReverse = false
+    var isSkip = false
 
     // 通过牌的编号直接获取牌的颜色和点数
     fun getColourAndPoint(cardIndex: Int): Triple<Int, Colour, Int> {
@@ -100,23 +102,70 @@ class Table(
         }
     }
 
-    override fun iterator(): Iterator<Member> {
-        return TableIterator(playerIndex, players)
-    }
-
-    class TableIterator(private var playerIndex: Int = 0, private val players: List<Member>) : Iterator<Member> {
-        override fun hasNext(): Boolean {
-            return (playerIndex < players.size)
-        }
-
-        override fun next(): Member {
-            val player = players[playerIndex]
-            if (hasNext()) {
-                playerIndex++
-            } else {
-                playerIndex = 0
+    // 获取当前回合的玩家及其下家
+    fun getPlayerAndNext(): Pair<Member, Member> {
+        if (isReverse) {
+            if (playerIndex <= 0) {
+                return Pair(players[playerIndex], players[players.size - 1])
             }
-            return player
+            return Pair(players[playerIndex], players[playerIndex - 1])
+        } else {
+            if (playerIndex >= players.size - 1) {
+                return Pair(players[playerIndex], players[0])
+            }
+            return Pair(players[playerIndex], players[playerIndex + 1])
         }
     }
+
+    // 设置下一个玩家
+    // 主要用于+2和+4的处理
+    fun setNextPlayer() {
+        if (isReverse) {
+            if (isSkip) {
+                if (players.size >= 3) {
+                    when (playerIndex) {
+                        players.size - 1 -> playerIndex = 1
+                        players.size - 2 -> playerIndex = 0
+                        else -> playerIndex += 2
+                    }
+                }
+                isSkip = false
+            } else {
+                if (playerIndex <= 0) {
+                    playerIndex = players.size - 1
+                } else {
+                    playerIndex -= 1
+                }
+            }
+        } else {
+            if (isSkip) {
+                if (players.size >= 3) {
+                    when (playerIndex) {
+                        players.size - 1 -> playerIndex = 1
+                        players.size - 2 -> playerIndex = 0
+                        else -> playerIndex += 2
+                    }
+                }
+                isSkip = false
+            } else {
+                if (playerIndex >= players.size - 1) {
+                    playerIndex = 0
+                } else {
+                    playerIndex += 1
+                }
+            }
+        }
+    }
+
+    // 添加玩家及其手牌
+    fun addHandCards(player: Member, handCards: CardCollection.HandCards) {
+        handCard.put(player, handCards)
+    }
+
+    // 获取指定玩家的手牌
+    fun getHandCards(player: Member): CardCollection.HandCards {
+        return handCard[player]!!
+    }
+
+
 }
