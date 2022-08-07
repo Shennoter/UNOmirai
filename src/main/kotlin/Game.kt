@@ -65,13 +65,8 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
                             prepareJob.cancel()
                         }
 
-                        -1 -> {
-                            "人数不足，无法开始\n" + "当前玩家：${table.players.map { it.nick }}"
-                        }
-
-                        else -> {
-                            "人数过多，无法开始\n" + "当前玩家：${table.players.map { it.nick }}"
-                        }
+                        -1 -> "人数不足，无法开始\n" + "当前玩家：${table.players.map { it.nick }}"
+                        else -> "人数过多，无法开始\n" + "当前玩家：${table.players.map { it.nick }}"
                     }
                 }
             }
@@ -243,7 +238,7 @@ class Game(private val gameGroup: Group) : CompletableJob by SupervisorJob() {
 
     // 结束阶段
     private suspend fun settle(winner: Member) {
-
+        gameGroup.sendMessage("玩家<${winner.nick}>获胜！")
     }
 
     // 一些工具函数
