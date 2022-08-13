@@ -1,5 +1,7 @@
 package pers.shennoter.card
 
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 /**
  * ### 牌的集合
